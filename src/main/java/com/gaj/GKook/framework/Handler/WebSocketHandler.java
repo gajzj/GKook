@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.Main;
+import com.gaj.GKook.config.BotConfig;
 
 import javax.websocket.*;
 import java.io.IOException;
@@ -48,7 +49,7 @@ public class WebSocketHandler {
                 String content = root.get("d").get("content").asText();
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
-                    if (!authorId.equals("2949419684")) {
+                    if (!authorId.equals(BotConfig.BOTID)) { // 不识别机器人 id
                         sn = root.get("sn").asInt();
                         String channelId = root.get("d").get("target_id").asText();
                         System.out.println("send from: " + authorId + " in channel: " + channelId + ": " + content);
