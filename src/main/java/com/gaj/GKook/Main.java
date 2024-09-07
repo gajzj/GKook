@@ -53,4 +53,8 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
+
+    public static void getMessageListByChannelId(String channelId) {
+        apiHandler.getMessageListByChannelId(channelId);
+    }
 }

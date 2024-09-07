@@ -51,8 +51,10 @@ public class WebSocketHandler {
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
                     if (!authorId.equals(BotConfig.BOTID)) { // 不识别机器人 id
-                        if (content.equals("/hello")) {
-
+                        if (content.startsWith("/info")) {
+                            System.out.println(message);
+                        } else if (content.equals("/test")) {
+                            Main.getMessageListByChannelId("2664558878395537");
                         }
                     }
                 } else if (content.equals("[系统消息]")) {
@@ -61,6 +63,7 @@ public class WebSocketHandler {
                         String userId = root.get("d").get("extra").get("body").get("user_id").asText();
                         String guildId = root.get("d").get("target_id").asText();
                         User user = Main.getUser(userId, guildId);
+                        // TODO: 推送频道固定为7870488044424418，需要更改
                         Main.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
                     } else if (extraType.equals("exited_channel")) { // 退出语言频道
                         Main.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
