@@ -52,6 +52,9 @@ public class ApiHandler {
 
     public void sendMessageToChannel(int type, String targetId, String content, String tempTargetId) {
         // TODO: 拓展消息种类 目前只接收 type = 1
+        if (type != 1) {
+            throw new IllegalArgumentException("type "  + type + "no support by now");
+        }
         try {
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> requestBody = new HashMap<>();
