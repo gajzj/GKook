@@ -12,6 +12,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ApiHandler {
     // 全局HttpClient:
@@ -31,16 +33,10 @@ public class ApiHandler {
      */
     public String getGateway() {
         try {
-            HttpRequest request = null;
-            request = HttpRequest.newBuilder(new URI(URL))
-                    // 设置Header:
+            HttpRequest request = HttpRequest.newBuilder(new URI(URL + "api/v3/gateway/index?compress=0"))
                     .header("Authorization", TYPE + " " + TOKEN)
-                    .header("User-Agent", "Java HttpClient")
-                    .header("Accept", "*/*")
-                    // 设置超时:
-                    .timeout(Duration.ofSeconds(5))
-                    // 设置版本:
-                    .version(HttpClient.Version.HTTP_2).build();
+                    .header("Content-Type", "application/json; utf-8")
+                    .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.body());
@@ -54,8 +50,40 @@ public class ApiHandler {
         }
     }
 
+    public void sendMessageToChannel(int type, String targetId, String content, String tempTargetId) {
+        // TODO: 拓展消息种类 目前只接收 type = 1
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("type", type);
+            requestBody.put("target_id", targetId);
+            requestBody.put("content", content);
+//            requestBody.put("temp_target_id", tempTargetId); // 所有消息都将是临时消息
+
+            String jsonInputString = mapper.writeValueAsString(requestBody);
+
+            HttpRequest request = HttpRequest.newBuilder(new URI(URL + "/api/v3/message/create"))
+                    .header("Authorization", TYPE + " " + TOKEN)
+                    .header("Content-Type", "application/json; utf-8")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
+                    .build();
+
+            System.out.println(requestBody);
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode root = mapper.readTree(response.body());
+            if (root.get("code").asInt() == 0) {
+                System.out.println(response.body());
+                System.out.println(">>>send message success<<<");
+            } else
+                throw new RuntimeException("!!!send message failed!!!");
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     // http 获取网关地址，不采用压缩
-    private final static String URL = "https://www.kookapp.cn/api/v3/gateway/index?compress=0";
+    private final static String URL = "https://www.kookapp.cn/";
     private final static String TOKEN = "1/MzIzNDE=/t+pDOqFhhhR0G1c3LJOUkQ==";
     // token 类型
     private final static String TYPE = "Bot";

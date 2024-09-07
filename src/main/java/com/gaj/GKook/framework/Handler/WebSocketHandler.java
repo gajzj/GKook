@@ -33,7 +33,7 @@ public class WebSocketHandler {
 
     // 当从服务器接收到消息时调用
     @OnMessage
-    public void onMessage(String message) throws JsonProcessingException, UnsupportedEncodingException {
+    public void onMessage(String message) throws JsonProcessingException, UnsupportedEncodingException, InterruptedException {
         message = new String(message.getBytes("ISO-8859-1"), "UTF-8");
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = null;
@@ -46,8 +46,15 @@ public class WebSocketHandler {
         switch (s) {
             case 0 -> { // TODO: 用 Event 队列优化
                 String content = root.get("d").get("content").asText();
-                sn = root.get("sn").asInt();
-                System.out.println(content);
+                if (content.startsWith("/")) {
+                    String authorId = root.get("d").get("extra").get("author").get("id").asText();
+                    if (!authorId.equals("2949419684")) {
+                        sn = root.get("sn").asInt();
+                        String channelId = root.get("d").get("target_id").asText();
+                        System.out.println("send from: " + authorId + " in channel: " + channelId + ": " + content);
+                        Main.sendMessageToChannel(1, channelId, "/你好", authorId);
+                    }
+                }
             }
             case 1 -> { // 服务器的 Hello 包
                 this.sessionId = root.get("d").get("sessionId").asText();
@@ -61,7 +68,6 @@ public class WebSocketHandler {
                     public void run() {
                         for (; ; ) {
                             sendMessage("{\"s\":2,\"sn\":" + sn + "}");
-                            System.out.println("sn= " + sn);
                             try {
                                 Thread.sleep(5000);
                             } catch (InterruptedException e) {
@@ -73,7 +79,7 @@ public class WebSocketHandler {
                 heart.start();
             }
             case 3 -> { // PONG
-                System.out.println("PONG");
+//                System.out.println("PONG");
             }
             case 5 -> { // 收到重连信令
                 reconnect();

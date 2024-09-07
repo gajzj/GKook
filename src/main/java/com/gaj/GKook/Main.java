@@ -28,4 +28,8 @@ public class Main {
         return apiHandler.getGateway();
     }
 
+    public static void sendMessageToChannel(int type, String targetId, String content, String tempTargetId) {
+        apiHandler.sendMessageToChannel(type, targetId, content, tempTargetId);
+    }
+
 }
