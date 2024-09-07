@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.Main;
+import com.gaj.GKook.bean.User;
 import com.gaj.GKook.config.BotConfig;
 
 import javax.websocket.*;
@@ -34,7 +35,7 @@ public class WebSocketHandler {
 
     // 当从服务器接收到消息时调用
     @OnMessage
-    public void onMessage(String message) throws JsonProcessingException, UnsupportedEncodingException, InterruptedException {
+    public void onMessage(String message) throws UnsupportedEncodingException {
         message = new String(message.getBytes("ISO-8859-1"), "UTF-8");
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = null;
@@ -50,34 +51,45 @@ public class WebSocketHandler {
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
                     if (!authorId.equals(BotConfig.BOTID)) { // 不识别机器人 id
-                        sn = root.get("sn").asInt();
-                        String channelId = root.get("d").get("target_id").asText();
-                        System.out.println("send from: " + authorId + " in channel: " + channelId + ": " + content);
-                        Main.sendMessageToChannel(1, channelId, "/你好", authorId);
+                        if (content.equals("/hello")) {
+
+                        }
+                    }
+                } else if (content.equals("[系统消息]")) {
+                    String extraType = root.get("d").get("extra").get("type").asText();
+                    if (extraType.equals("joined_channel")) { // 加入语言频道
+                        String userId = root.get("d").get("extra").get("body").get("user_id").asText();
+                        String guildId = root.get("d").get("target_id").asText();
+                        User user = Main.getUser(userId, guildId);
+                        Main.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
+                    } else if (extraType.equals("exited_channel")) { // 退出语言频道
+                        Main.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
                     }
                 }
+                sn = root.get("sn").asInt();
             }
             case 1 -> { // 服务器的 Hello 包
                 this.sessionId = root.get("d").get("sessionId").asText();
                 System.out.println(sessionId);
-                if (heart != null || reconnecting) {
-                    heart.interrupt();
+                if (heart != null || reconnecting) { // 重连时 sn 置 0
                     sn = 0;
-                }
-                heart = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (; ; ) {
-                            sendMessage("{\"s\":2,\"sn\":" + sn + "}");
-                            try {
-                                Thread.sleep(5000);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
+                } else { // 初次连接创建心跳线程
+                    heart = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            for (; ; ) {
+                                sendMessage("{\"s\":2,\"sn\":" + sn + "}");
+                                try {
+                                    Thread.sleep(5000);
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
                         }
-                    }
-                });
-                heart.start();
+                    });
+                    heart.start();
+                }
+
             }
             case 3 -> { // PONG
 //                System.out.println("PONG");
@@ -104,7 +116,7 @@ public class WebSocketHandler {
     // 当发生错误时调用
     @OnError
     public void onError(Session session, Throwable throwable) {
-        System.out.println("Error occurred: " + throwable.getMessage());
+        throwable.printStackTrace();
     }
 
     // 发送消息到服务器
