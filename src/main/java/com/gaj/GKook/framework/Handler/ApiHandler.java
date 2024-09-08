@@ -1,7 +1,6 @@
 package com.gaj.GKook.framework.Handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.config.ApiConfig;
@@ -23,15 +22,94 @@ import java.util.Map;
 public class ApiHandler {
     // TODO: 抽出构造 http 请求逻辑，减少重复代码
     // TODO: 单例实现 ApiHandler
-    // TODO: 每个 api 的速率控制是独立的
+    // TODO: 每个 api 的速率控制是独立的，但有全局限制
     // 全局HttpClient:
     private static HttpClient httpClient;
     private static ObjectMapper mapper = new ObjectMapper();
-    private static int rateLimit;
-    private static Instant overSpeedUntil;
+    private static int timesRemaining;
+    private static Instant lastUpdate;
 
     static {
         httpClient = HttpClient.newBuilder().build();
+        timesRemaining = ApiConfig.MAX_TIMES;
+    }
+
+    /**
+     * 是否还有剩余 api 调用次数
+     */
+    private void hasTimeRemaining() {
+        if (timesRemaining == 0) {
+            if (lastUpdate.plusSeconds(60).isAfter(Instant.now())) {
+                lastUpdate = Instant.now().plus(60, ChronoUnit.SECONDS);
+                throw new RuntimeException("!!!api request over speed, request at least one minute later!!!");
+            } else {
+                lastUpdate = Instant.now();
+                timesRemaining = ApiConfig.MAX_TIMES;
+            }
+        }
+        timesRemaining --;
+    }
+
+    /**
+     * 处理 get 请求
+     *
+     * @param url
+     * @return
+     */
+    private HttpResponse<String> get(String url) {
+        hasTimeRemaining();
+        try {
+            HttpRequest request = HttpRequest.newBuilder(new URI(url))
+                    .header("Authorization", BotConfig.BOTTOKEN)
+                    .header("Content-Type", "application/json; utf-8")
+                    .build();
+            return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("!!!url: " + url + " is invalid, plz check out!!!");
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 处理 post 请求
+     *
+     * @param url
+     * @param body
+     * @return
+     */
+    private HttpResponse<String> post(String url, Map<?, ?> body) {
+        hasTimeRemaining();
+        try {
+            String jsonString = mapper.writeValueAsString(body);
+            HttpRequest request = HttpRequest.newBuilder(new URI(url))
+                    .header("Authorization", BotConfig.BOTTOKEN)
+                    .header("Content-Type", "application/json; utf-8")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonString)).build();
+            System.out.println(jsonString);
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return response;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("!!!the body format is invalid!!!");
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private HttpResponse<String> post(String url, String body) {
+        hasTimeRemaining();
+        try {
+            HttpRequest request = HttpRequest.newBuilder(new URI(url))
+                    .header("Authorization", BotConfig.BOTTOKEN)
+                    .header("Content-Type", "application/json; utf-8")
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return response;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("!!!the body format is invalid!!!");
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -42,21 +120,13 @@ public class ApiHandler {
      */
     public String getMessageListByChannelId(String channelId) {
         try {
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL
-                            + "/api/v3/message/list"
-                            + "?target_id=" + channelId))
-                    .header("Authorization", TYPE + " " + TOKEN)
-                    .header("Content-Type", "application/json; utf-8")
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            mapper = new ObjectMapper();
+            HttpResponse<String> response = get(ApiConfig.API_URL + "/api/v3/message/list" + "?target_id=" + channelId);
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
-                System.out.println(response.headers());
                 return response.body();
             } else
                 throw new RuntimeException("!!!get message list failed!!!");
-        } catch (URISyntaxException | InterruptedException | IOException e) {
+        } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
@@ -64,44 +134,39 @@ public class ApiHandler {
     /**
      * 调用 /api/v3/message/delete 删除消息
      */
-    public void cleanupChannelMessage(String channelId) { // TODO: 先写查询消息列表
-        String messageList = this.getMessageListByChannelId(channelId);
+    public void cleanupChannelMessage(String channelId) {
+        String list = this.getMessageListByChannelId(channelId);
         List<String> msgIdList = new ArrayList<>();
         try { // 获取需要清理的消息 id
-            JsonNode rootNode = mapper.readTree(messageList);
+            JsonNode rootNode = mapper.readTree(list);
             JsonNode itemsNode = rootNode.get("data").get("items");
             if (itemsNode.isArray()) {
                 for (JsonNode item : itemsNode) {
                     String authorId = item.get("author").get("id").asText();
                     if (authorId.equals("1791210004") || authorId.equals(BotConfig.BOTID)) {
-                        msgIdList.add(item.get("id").asText());
                     }
+                    msgIdList.add(item.get("id").asText());
                 }
+            }
+            for (String s : msgIdList) {
+                HttpResponse<String> response = post(ApiConfig.API_URL + "/api/v3/message/delete", "{\"msg_id\":\"" + s + "\"}");
             }
             // 请求调用 api
-            for (String s : msgIdList) {
-                HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "/api/v3/message/delete"))
-                        .header("Authorization", TYPE + " " + TOKEN)
-                        .header("Content-Type", "application/json; utf-8")
-                        .POST(HttpRequest.BodyPublishers.ofString("{\"msg_id\":\"" + s + "\"}"))
-                        .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                JsonNode root = mapper.readTree(response.body());
-                if (root.get("code").asInt() == 0) {
-                    System.out.println(response.body());
-                } else {
-                    if (root.get("code").asInt() == 429) { // 超速
-                        System.out.println(response.headers() + response.body());
-                        String rest = response.headers().firstValue("x-rate-limit-reset").orElse(null);
-                        // TODO: 测试
-                        overSpeedUntil = Instant.now().plus(Integer.parseInt(rest), ChronoUnit.SECONDS);
-                    }
-                    System.out.println(response.headers() + response.body());
-                    throw new RuntimeException("!!!clean message failed!!!");
-                }
-            }
-        } catch (URISyntaxException | InterruptedException | JsonProcessingException e) {
-            throw new RuntimeException(e);
+//            for (String s : msgIdList) {
+//                HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "/api/v3/message/delete"))
+//                        .header("Authorization", TYPE + " " + TOKEN)
+//                        .header("Content-Type", "application/json; utf-8")
+//                        .POST(HttpRequest.BodyPublishers.ofString("{\"msg_id\":\"" + s + "\"}"))
+//                        .build();
+//                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+//                JsonNode root = mapper.readTree(response.body());
+//                if (root.get("code").asInt() == 0) {
+//                    System.out.println(response.body());
+//                } else {
+//                    System.out.println(response.headers() + response.body());
+//                    throw new RuntimeException("!!!clean message failed!!!");
+//                }
+//            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -116,7 +181,7 @@ public class ApiHandler {
      */
     public String getUser(String userId, String guildId) {
         try {
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "api/v3/user/view?user_id=" + userId + "&" + "guild_id=" + guildId))
+            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "api/v3/user/view?user_id=" + userId + "&" + "guild_id=" + guildId))
                     .header("Authorization", TYPE + " " + TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .build();
@@ -139,7 +204,7 @@ public class ApiHandler {
      */
     public String getGateway() {
         try {
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "api/v3/gateway/index?compress=0"))
+            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "api/v3/gateway/index?compress=0"))
                     .header("Authorization", TYPE + " " + TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .build();
@@ -180,7 +245,7 @@ public class ApiHandler {
 
             String jsonInputString = mapper.writeValueAsString(requestBody);
 
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "/api/v3/message/create"))
+            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "/api/v3/message/create"))
                     .header("Authorization", TYPE + " " + TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
@@ -198,12 +263,12 @@ public class ApiHandler {
         } catch (URISyntaxException | InterruptedException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-//            overSpeedUntil = Instant.now() +
+            e.printStackTrace();
             System.err.println("!!!api 调用超速!!!");
         }
     }
 
-    // http 获取网关地址，不采用压缩
+    // 机器 token
     private final static String TOKEN = "1/MzIzNDE=/t+pDOqFhhhR0G1c3LJOUkQ==";
     // token 类型
     private final static String TYPE = "Bot";

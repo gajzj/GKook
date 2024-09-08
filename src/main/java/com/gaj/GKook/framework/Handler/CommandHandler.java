@@ -3,7 +3,7 @@ package com.gaj.GKook.framework.Handler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gaj.GKook.Main;
+import com.gaj.GKook.BotManager;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -66,6 +66,6 @@ public class CommandHandler {
         String channelId = root.get("d").get("target_id").asText();
         String username = root.get("d").get("extra").get("author").get("username").asText();
         System.out.println("send from: " + authorId + " in channel: " + channelId + ": " + content);
-        Main.sendMessageToChannel(1, channelId, "你好" + username, authorId);
+        BotManager.sendMessageToChannel(1, channelId, "你好" + username, authorId);
     }
 }

@@ -2,14 +2,13 @@ package com.gaj.GKook;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.bean.User;
 import com.gaj.GKook.framework.Handler.ApiHandler;
 import com.gaj.GKook.framework.Handler.CommandHandler;
 import com.gaj.GKook.framework.Handler.WebSocketHandler;
 
-public class Main {
+public class BotManager {
 
     private static WebSocketHandler wsHandler;
     private static ApiHandler apiHandler;

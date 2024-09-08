@@ -1,9 +1,8 @@
 package com.gaj.GKook.framework.Handler;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gaj.GKook.Main;
+import com.gaj.GKook.BotManager;
 import com.gaj.GKook.bean.User;
 import com.gaj.GKook.config.BotConfig;
 
@@ -56,13 +55,13 @@ public class WebSocketHandler {
                             System.out.println(message);
                         } else if (content.equals("/test")) {
                             // Main.getMessageListByChannelId("2664558878395537");
-//                            for (int i = 0; i < 240; i++) {
-//                                Main.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
-//                            }
-//                            Main.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
-//                            Main.getMessageListByChannelId(channelId);
+                            for (int i = 0; i < 20; i++) {
+                                BotManager.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
+                            }
+//                            BotManager.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
+                            BotManager.getMessageListByChannelId(channelId);
                         } else if (content.equals("/cleanup")) { // 清理机器人和测试者消息
-                            Main.cleanupChannelMessage(channelId);
+                            BotManager.cleanupChannelMessage(channelId);
                         }
                     }
                 } else if (content.equals("[系统消息]")) {
@@ -70,9 +69,9 @@ public class WebSocketHandler {
                     if (extraType.equals("joined_channel")) { // 加入语言频道
                         String userId = root.get("d").get("extra").get("body").get("user_id").asText();
                         String guildId = root.get("d").get("target_id").asText();
-                        User user = Main.getUser(userId, guildId);
+                        User user = BotManager.getUser(userId, guildId);
                         // TODO: 推送频道固定为 7870488044424418，需要更改
-                        Main.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
+                        BotManager.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
                     } else if (extraType.equals("exited_channel")) { // 退出语言频道
                         // Main.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
                     }
@@ -140,7 +139,7 @@ public class WebSocketHandler {
     public void connect() {
         container = ContainerProvider.getWebSocketContainer();
         try {
-            String gateway = Main.getGateway();
+            String gateway = BotManager.getGateway();
             container.connectToServer(this, new URI(gateway)); // 连接到 WebSocket 服务器
         } catch (DeploymentException | URISyntaxException | IOException e) {
             e.printStackTrace();
