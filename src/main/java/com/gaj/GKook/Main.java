@@ -45,6 +45,7 @@ public class Main {
         try {
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             String data = apiHandler.getUser(userId, guildId);
+            // TODO: 这么截断字符串太逆天了
             int startIndex = data.indexOf("\"data\":") + "\"data\":".length();
             int endIndex = data.lastIndexOf("}");
             data = data.substring(startIndex, endIndex);
@@ -52,6 +53,10 @@ public class Main {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void cleanupChannelMessage(String channelId) {
+        apiHandler.cleanupChannelMessage(channelId);
     }
 
     public static void getMessageListByChannelId(String channelId) {

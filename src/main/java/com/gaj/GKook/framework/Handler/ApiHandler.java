@@ -1,10 +1,9 @@
 package com.gaj.GKook.framework.Handler;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.config.ApiConfig;
+import com.gaj.GKook.config.BotConfig;
 
 import java.io.IOException;
 import java.net.URI;
@@ -12,7 +11,11 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ApiHandler {
@@ -20,6 +23,8 @@ public class ApiHandler {
     // TODO: 单例实现 ApiHandler
     // 全局HttpClient:
     private static HttpClient httpClient;
+    private static ObjectMapper mapper = new ObjectMapper();
+    private static Instant overSpeedUntil;
 
     static {
         httpClient = HttpClient.newBuilder().build();
@@ -29,8 +34,9 @@ public class ApiHandler {
      * 调用 /api/v3/message/list 获取消息列表
      *
      * @param channelId 要获取的频道 id
+     * @return 接口调用响应体
      */
-    public void getMessageListByChannelId(String channelId) {
+    public String getMessageListByChannelId(String channelId) {
         try {
             HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL
                             + "/api/v3/message/list"
@@ -39,10 +45,10 @@ public class ApiHandler {
                     .header("Content-Type", "application/json; utf-8")
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            ObjectMapper mapper = new ObjectMapper();
+            mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
-                System.out.println(response.body());
+                return response.body();
             } else
                 throw new RuntimeException("!!!get message list failed!!!");
         } catch (URISyntaxException | InterruptedException | IOException e) {
@@ -51,21 +57,43 @@ public class ApiHandler {
     }
 
     /**
-     * 调用 /api/v3/message/delete 删除消息
+     * 调用 /api/v3/message/delete 删除消息，根据 response 控制调用速率
      */
-    public void cleanMessage(String messageId) { // TODO: 先写查询消息列表
-        try {
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "/api/v3/message/delete"))
-                    .header("Authorization", TYPE + " " + TOKEN)
-                    .header("Content-Type", "application/json; utf-8")
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(response.body());
-            if (root.get("code").asInt() == 0) {
-
-            } else
-                throw new RuntimeException("!!!clean message failed!!!");
+    public void cleanupChannelMessage(String channelId) { // TODO: 先写查询消息列表
+        String messageList = this.getMessageListByChannelId(channelId);
+        List<String> msgIdList = new ArrayList<>();
+        try { // 获取需要清理的消息 id
+            JsonNode rootNode = mapper.readTree(messageList);
+            JsonNode itemsNode = rootNode.get("data").get("items");
+            if (itemsNode.isArray()) {
+                for (JsonNode item : itemsNode) {
+                    String authorId = item.get("author").get("id").asText();
+                    if (authorId.equals("1791210004") || authorId.equals(BotConfig.BOTID)) {
+                        msgIdList.add(item.get("id").asText());
+                    }
+                }
+            }
+            // 请求调用 api
+            for (int i = 0; i < messageList.length(); i ++ ) {
+                HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "/api/v3/message/delete"))
+                        .header("Authorization", TYPE + " " + TOKEN)
+                        .header("Content-Type", "application/json; utf-8")
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"msg_id\":\"" + msgIdList.get(i) + "\"}"))
+                        .build();
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                JsonNode root = mapper.readTree(response.body());
+                if (root.get("code").asInt() == 0) {
+                    // success
+                } else {
+                    if (root.get("code").asInt() == 429) { // 超速
+                        String rest = response.headers().firstValue("x-rate-limit-reset").orElse(null);
+                        // TODO: 测试
+                        overSpeedUntil = Instant.now().plus(Integer.parseInt(rest), ChronoUnit.SECONDS);
+                    }
+                    System.out.println(response.headers() + response.body());
+                    throw new RuntimeException("!!!clean message failed!!!");
+                }
+            }
         } catch (URISyntaxException | IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -85,7 +113,6 @@ public class ApiHandler {
                     .header("Content-Type", "application/json; utf-8")
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
 //                System.out.println(response.body());
@@ -109,7 +136,6 @@ public class ApiHandler {
                     .header("Content-Type", "application/json; utf-8")
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 System.out.println(">>>get gateway success<<<");
@@ -137,7 +163,6 @@ public class ApiHandler {
             throw new IllegalArgumentException("type " + type + "no support by now");
         }
         try {
-            ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("type", type);
             requestBody.put("target_id", targetId);
