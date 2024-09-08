@@ -51,13 +51,18 @@ public class WebSocketHandler {
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
                     if (!authorId.equals(BotConfig.BOTID)) { // 不识别机器人 id
+                        String channelId = root.get("d").get("target_id").asText();
                         if (content.startsWith("/info")) {
                             System.out.println(message);
                         } else if (content.equals("/test")) {
                             // Main.getMessageListByChannelId("2664558878395537");
-
+//                            for (int i = 0; i < 240; i++) {
+//                                Main.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
+//                            }
+//                            Main.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
+//                            Main.getMessageListByChannelId(channelId);
                         } else if (content.equals("/cleanup")) { // 清理机器人和测试者消息
-                            Main.cleanupChannelMessage("2664558878395537");
+                            Main.cleanupChannelMessage(channelId);
                         }
                     }
                 } else if (content.equals("[系统消息]")) {

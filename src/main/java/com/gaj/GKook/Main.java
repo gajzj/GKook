@@ -9,12 +9,6 @@ import com.gaj.GKook.framework.Handler.ApiHandler;
 import com.gaj.GKook.framework.Handler.CommandHandler;
 import com.gaj.GKook.framework.Handler.WebSocketHandler;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.WebSocket;
-import java.util.concurrent.CompletionStage;
-
-
 public class Main {
 
     private static WebSocketHandler wsHandler;

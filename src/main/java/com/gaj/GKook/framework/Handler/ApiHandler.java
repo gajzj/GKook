@@ -23,9 +23,11 @@ import java.util.Map;
 public class ApiHandler {
     // TODO: 抽出构造 http 请求逻辑，减少重复代码
     // TODO: 单例实现 ApiHandler
+    // TODO: 每个 api 的速率控制是独立的
     // 全局HttpClient:
     private static HttpClient httpClient;
     private static ObjectMapper mapper = new ObjectMapper();
+    private static int rateLimit;
     private static Instant overSpeedUntil;
 
     static {
@@ -50,6 +52,7 @@ public class ApiHandler {
             mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
+                System.out.println(response.headers());
                 return response.body();
             } else
                 throw new RuntimeException("!!!get message list failed!!!");
@@ -85,7 +88,7 @@ public class ApiHandler {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 JsonNode root = mapper.readTree(response.body());
                 if (root.get("code").asInt() == 0) {
-                    // success
+                    System.out.println(response.body());
                 } else {
                     if (root.get("code").asInt() == 429) { // 超速
                         System.out.println(response.headers() + response.body());
@@ -144,6 +147,7 @@ public class ApiHandler {
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 System.out.println(">>>get gateway success<<<");
+                String rest = response.headers().firstValue("x-rate-limit-reset").orElse(null);
                 return root.get("data").get("url").asText();
             } else
                 throw new RuntimeException("!!!get gateway failed!!!");
@@ -185,13 +189,17 @@ public class ApiHandler {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
-//                System.out.println(response.body());
-            } else {
-                System.out.println(response.body());
-                throw new RuntimeException("!!!send message failed!!!");
+                System.out.println(response.headers());
+                response.headers().firstValue("x-rate-limit-reset").orElse(null);
+            } else if (root.get("code").asInt() == 429) {
+                System.out.println(response.headers());
+                throw new RuntimeException("!!!over speed!!!");
             }
-        } catch (URISyntaxException | IOException | InterruptedException e) {
+        } catch (URISyntaxException | InterruptedException e) {
             throw new RuntimeException(e);
+        } catch (IOException e) {
+//            overSpeedUntil = Instant.now() +
+            System.err.println("!!!api 调用超速!!!");
         }
     }
 
