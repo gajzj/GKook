@@ -1,5 +1,7 @@
 package com.gaj.GKook.framework.Handler;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.config.ApiConfig;
@@ -57,7 +59,7 @@ public class ApiHandler {
     }
 
     /**
-     * 调用 /api/v3/message/delete 删除消息，根据 response 控制调用速率
+     * 调用 /api/v3/message/delete 删除消息
      */
     public void cleanupChannelMessage(String channelId) { // TODO: 先写查询消息列表
         String messageList = this.getMessageListByChannelId(channelId);
@@ -74,11 +76,11 @@ public class ApiHandler {
                 }
             }
             // 请求调用 api
-            for (int i = 0; i < messageList.length(); i ++ ) {
+            for (String s : msgIdList) {
                 HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.APIURL + "/api/v3/message/delete"))
                         .header("Authorization", TYPE + " " + TOKEN)
                         .header("Content-Type", "application/json; utf-8")
-                        .POST(HttpRequest.BodyPublishers.ofString("{\"msg_id\":\"" + msgIdList.get(i) + "\"}"))
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"msg_id\":\"" + s + "\"}"))
                         .build();
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 JsonNode root = mapper.readTree(response.body());
@@ -86,6 +88,7 @@ public class ApiHandler {
                     // success
                 } else {
                     if (root.get("code").asInt() == 429) { // 超速
+                        System.out.println(response.headers() + response.body());
                         String rest = response.headers().firstValue("x-rate-limit-reset").orElse(null);
                         // TODO: 测试
                         overSpeedUntil = Instant.now().plus(Integer.parseInt(rest), ChronoUnit.SECONDS);
@@ -94,7 +97,9 @@ public class ApiHandler {
                     throw new RuntimeException("!!!clean message failed!!!");
                 }
             }
-        } catch (URISyntaxException | IOException | InterruptedException e) {
+        } catch (URISyntaxException | InterruptedException | JsonProcessingException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
