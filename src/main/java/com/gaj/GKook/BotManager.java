@@ -3,7 +3,7 @@ package com.gaj.GKook;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gaj.GKook.bean.User;
+import com.gaj.GKook.framework.bean.User;
 import com.gaj.GKook.framework.Handler.ApiHandler;
 import com.gaj.GKook.framework.Handler.CommandHandler;
 import com.gaj.GKook.framework.Handler.WebSocketHandler;
@@ -48,8 +48,8 @@ public class BotManager {
         }
     }
 
-    public static void cleanupChannelMessage(String channelId) {
-        apiHandler.cleanupChannelMessage(channelId);
+    public static void cleanupChannelMessage(String channelId, String authorId) {
+        apiHandler.cleanupChannelMessage(channelId, authorId);
     }
 
     public static void getMessageListByChannelId(String channelId) {

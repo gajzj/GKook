@@ -3,8 +3,8 @@ package com.gaj.GKook.framework.Handler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gaj.GKook.config.ApiConfig;
-import com.gaj.GKook.config.BotConfig;
+import com.gaj.GKook.framework.config.ApiConfig;
+import com.gaj.GKook.framework.config.BotConfig;
 
 import java.io.IOException;
 import java.net.URI;
@@ -20,12 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 public class ApiHandler {
-    // TODO: 抽出构造 http 请求逻辑，减少重复代码
-    // TODO: 单例实现 ApiHandler
-    // TODO: 每个 api 的速率控制是独立的，但有全局限制
-    // 全局HttpClient:
-    private static HttpClient httpClient;
-    private static ObjectMapper mapper = new ObjectMapper();
+    private static final HttpClient httpClient;
+    private static final ObjectMapper mapper = new ObjectMapper();
     private static int timesRemaining;
     private static Instant lastUpdate;
 
@@ -61,7 +57,7 @@ public class ApiHandler {
         hasTimeRemaining();
         try {
             HttpRequest request = HttpRequest.newBuilder(new URI(url))
-                    .header("Authorization", BotConfig.BOTTOKEN)
+                    .header("Authorization", BotConfig.BOT_TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .build();
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -84,7 +80,7 @@ public class ApiHandler {
         try {
             String jsonString = mapper.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder(new URI(url))
-                    .header("Authorization", BotConfig.BOTTOKEN)
+                    .header("Authorization", BotConfig.BOT_TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonString)).build();
             System.out.println(jsonString);
@@ -101,7 +97,7 @@ public class ApiHandler {
         hasTimeRemaining();
         try {
             HttpRequest request = HttpRequest.newBuilder(new URI(url))
-                    .header("Authorization", BotConfig.BOTTOKEN)
+                    .header("Authorization", BotConfig.BOT_TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -121,7 +117,7 @@ public class ApiHandler {
      */
     public String getMessageListByChannelId(String channelId) {
         try {
-            HttpResponse<String> response = get(ApiConfig.API_URL + "/api/v3/message/list" + "?target_id=" + channelId);
+            HttpResponse<String> response = get(ApiConfig.ApiEndpoint.MESSAGE_LIST.toFullUrl() + "?target_id=" + channelId);
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 return response.body();
@@ -135,7 +131,7 @@ public class ApiHandler {
     /**
      * 调用 /api/v3/message/delete 删除消息
      */
-    public void cleanupChannelMessage(String channelId) {
+    public void cleanupChannelMessage(String channelId, String authorId) {
         String list = this.getMessageListByChannelId(channelId);
         List<String> msgIdList = new ArrayList<>();
         try { // 获取需要清理的消息 id
@@ -143,14 +139,14 @@ public class ApiHandler {
             JsonNode itemsNode = rootNode.get("data").get("items");
             if (itemsNode.isArray()) {
                 for (JsonNode item : itemsNode) {
-                    String authorId = item.get("author").get("id").asText();
-                    if (authorId.equals("1791210004") || authorId.equals(BotConfig.BOTID)) {
+                    String id = item.get("author").get("id").asText();
+                    if (id.equals(authorId)) {
+                        msgIdList.add(item.get("id").asText());
                     }
-                    msgIdList.add(item.get("id").asText());
                 }
             }
             for (String s : msgIdList) {
-                HttpResponse<String> response = post(ApiConfig.API_URL + "/api/v3/message/delete", "{\"msg_id\":\"" + s + "\"}");
+                HttpResponse<String> response = post(ApiConfig.ApiEndpoint.MESSAGE_DELETE.toFullUrl(), "{\"msg_id\":\"" + s + "\"}");
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -158,25 +154,15 @@ public class ApiHandler {
     }
 
     /**
-     * 删除频道中指定用户的消息
-     *
-     * @param channelId
-     * @param authorId
-     */
-    public void cleanupChannelMessage(String channelId, String authorId) {
-
-    }
-
-    /**
      * 调用 /api/v3/user/view 获取用户信息
      *
      * @param userId  用户 id
      * @param guildId 用户所在服务器 id
-     * @return 返回获取的 user 实例
+     * @return
      */
     public String getUser(String userId, String guildId) {
         try {
-            HttpResponse<String> response = get(ApiConfig.API_URL + "api/v3/user/view?user_id=" + userId + "&" + "guild_id=" + guildId);
+            HttpResponse<String> response = get(ApiConfig.ApiEndpoint.USER_VIEW.toFullUrl() + "?user_id=" + userId + "&" + "guild_id=" + guildId);
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 return response.body();
@@ -193,8 +179,8 @@ public class ApiHandler {
      * @return 机器人的网关地址
      */
     public String getGateway() {
-        try {
-            HttpResponse<String> response = get(ApiConfig.API_URL + "api/v3/gateway/index?compress=0");
+        try { //消息不压缩
+            HttpResponse<String> response = get(ApiConfig.ApiEndpoint.GATEWAY_INDEX.toFullUrl() + "?compress=0");
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 System.out.println(">>>get gateway success<<<");
@@ -228,7 +214,7 @@ public class ApiHandler {
             requestBody.put("content", content);
 //            requestBody.put("temp_target_id", tempTargetId); // 所有消息都将是临时消息
 
-            HttpResponse<String> response = post(ApiConfig.API_URL + "/api/v3/message/create", requestBody);
+            HttpResponse<String> response = post(ApiConfig.ApiEndpoint.MESSAGE_CREATE.toFullUrl(), requestBody);
 
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
@@ -240,9 +226,4 @@ public class ApiHandler {
             e.printStackTrace();
         }
     }
-
-    // 机器 token
-    private final static String TOKEN = "1/MzIzNDE=/t+pDOqFhhhR0G1c3LJOUkQ==";
-    // token 类型
-    private final static String TYPE = "Bot";
 }

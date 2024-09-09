@@ -3,8 +3,9 @@ package com.gaj.GKook.framework.Handler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.BotManager;
-import com.gaj.GKook.bean.User;
-import com.gaj.GKook.config.BotConfig;
+import com.gaj.GKook.framework.bean.EventType;
+import com.gaj.GKook.framework.bean.User;
+import com.gaj.GKook.framework.config.BotConfig;
 
 import javax.websocket.*;
 import java.io.IOException;
@@ -18,11 +19,24 @@ public class WebSocketHandler {
     private Session session;
     private WebSocketContainer container;
     private String sessionId;
-    private Thread heart;
+    private final Thread heart;
     private boolean reconnecting = false;
     private int sn = 0;
 
     public WebSocketHandler() {
+        heart = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (; ; ) {
+                    sendMessage("{\"s\":2,\"sn\":" + sn + "}");
+                    try {
+                        Thread.sleep(25000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
     }
 
     // 当 WebSocket 连接打开时调用
@@ -49,31 +63,31 @@ public class WebSocketHandler {
                 String content = root.get("d").get("content").asText();
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
-                    if (!authorId.equals(BotConfig.BOTID)) { // 不识别机器人 id
+                    if (!authorId.equals(BotConfig.BOT_ID)) { // 不识别机器人 id
                         String channelId = root.get("d").get("target_id").asText();
+
                         if (content.startsWith("/info")) {
                             System.out.println(message);
                         } else if (content.equals("/test")) {
-                            // Main.getMessageListByChannelId("2664558878395537");
-                            for (int i = 0; i < 20; i++) {
-                                BotManager.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
-                            }
-//                            BotManager.sendMessageToChannel(1, channelId, "测试消息，待删除", "");
-                            BotManager.getMessageListByChannelId(channelId);
-                        } else if (content.equals("/cleanup")) { // 清理机器人和测试者消息
-                            BotManager.cleanupChannelMessage(channelId);
+
+                        } else if (content.equals("/cleanup")) {
+                            BotManager.cleanupChannelMessage(channelId, authorId);
                         }
                     }
                 } else if (content.equals("[系统消息]")) {
                     String extraType = root.get("d").get("extra").get("type").asText();
-                    if (extraType.equals("joined_channel")) { // 加入语言频道
-                        String userId = root.get("d").get("extra").get("body").get("user_id").asText();
-                        String guildId = root.get("d").get("target_id").asText();
-                        User user = BotManager.getUser(userId, guildId);
-                        // TODO: 推送频道固定为 7870488044424418，需要更改
-                        BotManager.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
-                    } else if (extraType.equals("exited_channel")) { // 退出语言频道
-                        // Main.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
+                    EventType eventType = EventType.value(extraType);
+                    switch (eventType) {
+                        case JOINED_CHANNEL -> {
+                            String userId = root.get("d").get("extra").get("body").get("user_id").asText();
+                            String guildId = root.get("d").get("target_id").asText();
+                            User user = BotManager.getUser(userId, guildId);
+                            // TODO: 推送频道固定为 7870488044424418，需要更改
+                            BotManager.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
+                        }
+                        case EXITED_CHANNEL -> {
+//                            BotManager.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
+                        }
                     }
                 }
                 sn = root.get("sn").asInt();
@@ -81,25 +95,11 @@ public class WebSocketHandler {
             case 1 -> { // 服务器的 Hello 包
                 this.sessionId = root.get("d").get("sessionId").asText();
                 System.out.println(sessionId);
-                if (heart != null || reconnecting) { // 重连时 sn 置 0
+                if (reconnecting) { // 重连时 sn 置 0
                     sn = 0;
                 } else { // 初次连接创建心跳线程
-                    heart = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            for (; ; ) {
-                                sendMessage("{\"s\":2,\"sn\":" + sn + "}");
-                                try {
-                                    Thread.sleep(5000);
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        }
-                    });
                     heart.start();
                 }
-
             }
             case 3 -> { // PONG
 //                System.out.println("PONG");
@@ -121,6 +121,7 @@ public class WebSocketHandler {
     @OnClose
     public void onClose(Session session, CloseReason closeReason) {
         System.out.println("Connection closed: " + closeReason.getReasonPhrase());
+        reconnect();
     }
 
     // 当发生错误时调用

@@ -1,4 +1,4 @@
-package com.gaj.GKook.bean;
+package com.gaj.GKook.framework.bean;
 
 public class User {
     private String id;
