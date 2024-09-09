@@ -5,13 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaj.GKook.BotManager;
 import com.gaj.GKook.framework.bean.EventType;
 import com.gaj.GKook.framework.bean.User;
+import com.gaj.GKook.framework.commad.Command;
 import com.gaj.GKook.framework.config.BotConfig;
+import com.gaj.GKook.imp.command.HelloCommand;
 
 import javax.websocket.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @ClientEndpoint
 public class WebSocketHandler {
@@ -52,6 +57,7 @@ public class WebSocketHandler {
         message = new String(message.getBytes("ISO-8859-1"), "UTF-8");
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = null;
+        System.out.println(message);
         try {
             root = mapper.readTree(message);
         } catch (IOException e) {
@@ -61,18 +67,32 @@ public class WebSocketHandler {
         switch (s) {
             case 0 -> { // TODO: 用 Event 队列优化
                 String content = root.get("d").get("content").asText();
+
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
                     if (!authorId.equals(BotConfig.BOT_ID)) { // 不识别机器人 id
                         String channelId = root.get("d").get("target_id").asText();
-
-                        if (content.startsWith("/info")) {
-                            System.out.println(message);
-                        } else if (content.equals("/test")) {
-
-                        } else if (content.equals("/cleanup")) {
-                            BotManager.cleanupChannelMessage(channelId, authorId);
+                        Optional<Command> command = BotManager.interpret(content);
+                        if (command.isPresent()) {
+                            if (command.get() instanceof HelloCommand) {
+                                Map<String, Object> contextParams = new HashMap<>();
+                                contextParams.put("type", 1);
+                                contextParams.put("targetId", channelId);
+//                                contextParams.put("content", "hello");
+                                contextParams.put("tempTargetId", "");
+                                command.get().setContextParameters(contextParams);
+                                BotManager.execute(command.get());
+                            }
                         }
+
+
+//                        if (content.startsWith("/info")) {
+//                            System.out.println(message);
+//                        } else if (content.equals("/test")) {
+//
+//                        } else if (content.equals("/cleanup")) {
+//                            BotManager.cleanupChannelMessage(channelId, authorId);
+//                        }
                     }
                 } else if (content.equals("[系统消息]")) {
                     String extraType = root.get("d").get("extra").get("type").asText();

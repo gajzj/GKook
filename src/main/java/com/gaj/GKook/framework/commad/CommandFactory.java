@@ -25,7 +25,7 @@ public class CommandFactory {
     // 创建命令的方法
     public static Command createCommand(String commandName, Map<String, Object> contextParams, List<String> userArguments) {
         Supplier<Command> supplier = commandRegistry.get(commandName.toLowerCase());
-
+        System.out.println(commandName);
         if (supplier == null) {
             System.err.println("Unknown command: " + commandName);
             return null;

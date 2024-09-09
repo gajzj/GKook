@@ -7,7 +7,10 @@ import com.gaj.GKook.framework.bean.User;
 import com.gaj.GKook.framework.Handler.ApiHandler;
 import com.gaj.GKook.framework.Handler.CommandHandler;
 import com.gaj.GKook.framework.Handler.WebSocketHandler;
+import com.gaj.GKook.framework.commad.Command;
 import com.gaj.GKook.framework.commad.CommandProcessor;
+
+import java.util.Optional;
 
 public class BotManager {
 
@@ -15,6 +18,7 @@ public class BotManager {
     private static ApiHandler apiHandler;
     private static CommandHandler commandHandler;
     private static ObjectMapper mapper;
+    private static CommandProcessor cp;
 
     public static void main(String[] args) throws Exception {
         apiHandler = new ApiHandler();
@@ -22,14 +26,19 @@ public class BotManager {
         commandHandler = CommandHandler.getInstance();
         mapper = new ObjectMapper();
         wsHandler.connect();
-
-        // TODO: 将命令模块织入
-        CommandProcessor cp = new CommandProcessor();
-        cp.process("/hello");
+        cp = new CommandProcessor();
 
         for (; ; ) {
 
         }
+    }
+
+    public static Optional<Command> interpret(String commandString) {
+        return cp.interpret(commandString);
+    }
+
+    public static void execute(Command command) {
+        cp.execute(command);
     }
 
     public static String getGateway() {
