@@ -7,6 +7,7 @@ import com.gaj.GKook.framework.bean.User;
 import com.gaj.GKook.framework.Handler.ApiHandler;
 import com.gaj.GKook.framework.Handler.CommandHandler;
 import com.gaj.GKook.framework.Handler.WebSocketHandler;
+import com.gaj.GKook.framework.commad.CommandProcessor;
 
 public class BotManager {
 
@@ -21,6 +22,11 @@ public class BotManager {
         commandHandler = CommandHandler.getInstance();
         mapper = new ObjectMapper();
         wsHandler.connect();
+
+        // TODO: 将命令模块织入
+        CommandProcessor cp = new CommandProcessor();
+        cp.process("/hello");
+
         for (; ; ) {
 
         }
