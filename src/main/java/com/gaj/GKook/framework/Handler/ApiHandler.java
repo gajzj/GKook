@@ -158,6 +158,16 @@ public class ApiHandler {
     }
 
     /**
+     * 删除频道中指定用户的消息
+     *
+     * @param channelId
+     * @param authorId
+     */
+    public void cleanupChannelMessage(String channelId, String authorId) {
+
+    }
+
+    /**
      * 调用 /api/v3/user/view 获取用户信息
      *
      * @param userId  用户 id
