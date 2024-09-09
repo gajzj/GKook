@@ -32,6 +32,7 @@ public class ApiHandler {
     static {
         httpClient = HttpClient.newBuilder().build();
         timesRemaining = ApiConfig.MAX_TIMES;
+        lastUpdate = Instant.now();
     }
 
     /**
@@ -47,7 +48,7 @@ public class ApiHandler {
                 timesRemaining = ApiConfig.MAX_TIMES;
             }
         }
-        timesRemaining --;
+        timesRemaining--;
     }
 
     /**
@@ -151,22 +152,6 @@ public class ApiHandler {
             for (String s : msgIdList) {
                 HttpResponse<String> response = post(ApiConfig.API_URL + "/api/v3/message/delete", "{\"msg_id\":\"" + s + "\"}");
             }
-            // 请求调用 api
-//            for (String s : msgIdList) {
-//                HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "/api/v3/message/delete"))
-//                        .header("Authorization", TYPE + " " + TOKEN)
-//                        .header("Content-Type", "application/json; utf-8")
-//                        .POST(HttpRequest.BodyPublishers.ofString("{\"msg_id\":\"" + s + "\"}"))
-//                        .build();
-//                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-//                JsonNode root = mapper.readTree(response.body());
-//                if (root.get("code").asInt() == 0) {
-//                    System.out.println(response.body());
-//                } else {
-//                    System.out.println(response.headers() + response.body());
-//                    throw new RuntimeException("!!!clean message failed!!!");
-//                }
-//            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -177,22 +162,17 @@ public class ApiHandler {
      *
      * @param userId  用户 id
      * @param guildId 用户所在服务器 id
-     * @return 接口调用响应体，请在外部做包装工作
+     * @return 返回获取的 user 实例
      */
     public String getUser(String userId, String guildId) {
         try {
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "api/v3/user/view?user_id=" + userId + "&" + "guild_id=" + guildId))
-                    .header("Authorization", TYPE + " " + TOKEN)
-                    .header("Content-Type", "application/json; utf-8")
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = get(ApiConfig.API_URL + "api/v3/user/view?user_id=" + userId + "&" + "guild_id=" + guildId);
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
-//                System.out.println(response.body());
                 return response.body();
             } else
                 throw new RuntimeException("!!!get user failed!!!");
-        } catch (URISyntaxException | IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -204,19 +184,14 @@ public class ApiHandler {
      */
     public String getGateway() {
         try {
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "api/v3/gateway/index?compress=0"))
-                    .header("Authorization", TYPE + " " + TOKEN)
-                    .header("Content-Type", "application/json; utf-8")
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = get(ApiConfig.API_URL + "api/v3/gateway/index?compress=0");
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 System.out.println(">>>get gateway success<<<");
-                String rest = response.headers().firstValue("x-rate-limit-reset").orElse(null);
                 return root.get("data").get("url").asText();
             } else
                 throw new RuntimeException("!!!get gateway failed!!!");
-        } catch (URISyntaxException | IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -243,28 +218,16 @@ public class ApiHandler {
             requestBody.put("content", content);
 //            requestBody.put("temp_target_id", tempTargetId); // 所有消息都将是临时消息
 
-            String jsonInputString = mapper.writeValueAsString(requestBody);
+            HttpResponse<String> response = post(ApiConfig.API_URL + "/api/v3/message/create", requestBody);
 
-            HttpRequest request = HttpRequest.newBuilder(new URI(ApiConfig.API_URL + "/api/v3/message/create"))
-                    .header("Authorization", TYPE + " " + TOKEN)
-                    .header("Content-Type", "application/json; utf-8")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
+                // success
+            } else {
                 System.out.println(response.headers());
-                response.headers().firstValue("x-rate-limit-reset").orElse(null);
-            } else if (root.get("code").asInt() == 429) {
-                System.out.println(response.headers());
-                throw new RuntimeException("!!!over speed!!!");
             }
-        } catch (URISyntaxException | InterruptedException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("!!!api 调用超速!!!");
         }
     }
 
