@@ -1,11 +1,12 @@
 package com.gaj.GKook.framework.commad;
 
 import com.gaj.GKook.framework.config.CommandConfig;
-import com.gaj.GKook.imp.command.CleanupCommand;
-import com.gaj.GKook.imp.command.HelloCommand;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,13 +18,50 @@ public class CommandFactory {
 
     // 静态块注册基本命令
     static {
-        // TODO: 修改为注解加载？
-        registerCommand("hello", HelloCommand::new);
-        registerCommand("cleanup", CleanupCommand::new);
+        // 注解加载
+        try {
+            init();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private static void init() {
+    /**
+     * 根据设置的包名找到其下的所有被注解修饰的 Command 类
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    private static void init() throws IOException, ClassNotFoundException {
+        String basePackage = CommandConfig.COMMAND_PACKAGE;
+        String packagePath = basePackage.replace('.', '/');
+        URL packageURL = Thread.currentThread().getContextClassLoader().getResource(packagePath);
+        if (packageURL == null) {
+            throw new IOException("Package not found: " + basePackage);
+        }
 
+        File directory = new File(URLDecoder.decode(packageURL.getFile(), StandardCharsets.UTF_8));
+
+        if (directory.exists()) {
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile() && file.getName().endsWith(".class")) {
+                        String className = basePackage + '.' + file.getName().replace(".class", "");
+                        Class<?> clazz = Class.forName(className);
+                        if (clazz.isAnnotationPresent(GCommand.class)) {
+                            registerCommand(clazz.getAnnotation(GCommand.class).value(), () -> {
+                                try {
+                                    return (Command) clazz.getConstructor().newInstance();
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // 注册命令方法
@@ -39,7 +77,6 @@ public class CommandFactory {
             System.err.println("Unknown command: " + commandName);
             return null;
         }
-
         Command command = supplier.get();
         command.setUserArguments(userArguments);
 
