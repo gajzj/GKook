@@ -11,7 +11,6 @@ public class CommandProcessor {
         commandOpt.ifPresent(this::execute);
     }
 
-    // TODO: 有 bug 参数命令不能正确解析，链式命令不能正确创建
     // 解析命令字符串
     public Optional<Command> interpret(String commandString) {
         if (commandString == null || commandString.isEmpty()) {
@@ -23,7 +22,12 @@ public class CommandProcessor {
         if (!commandString.startsWith("/")) {
             return Optional.empty();
         }
+
+        // 移除命令前的 /
         commandString = commandString.substring(1);
+
+        // 移除命令中没有参数的括号
+        commandString = commandString.replace("()", "");
 
         // 分割链式命令
         List<String> commands = splitCommand(commandString);
