@@ -42,6 +42,11 @@ public abstract class AbstractCommand implements Command {
         }
     }
 
+    @Override
+    public Command next() {
+        return this.nextCommand;
+    }
+
     protected abstract void executeCommand();
 }
 

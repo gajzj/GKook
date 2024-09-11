@@ -1,7 +1,10 @@
 package com.gaj.GKook.framework.commad;
 
+import com.gaj.GKook.framework.config.CommandConfig;
 import com.gaj.GKook.imp.command.HelloCommand;
 
+import java.io.IOException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +17,7 @@ public class CommandFactory {
     // 静态块注册基本命令
     static {
         // TODO: 修改为注解加载？
-         registerCommand("hello", HelloCommand::new);
+        registerCommand("hello", HelloCommand::new);
     }
 
     // 注册命令方法
@@ -23,7 +26,7 @@ public class CommandFactory {
     }
 
     // 创建命令的方法
-    public static Command createCommand(String commandName, Map<String, Object> contextParams, List<String> userArguments) {
+    public static Command createCommand(String commandName, List<String> userArguments) {
         Supplier<Command> supplier = commandRegistry.get(commandName.toLowerCase());
         System.out.println(commandName);
         if (supplier == null) {
@@ -32,7 +35,6 @@ public class CommandFactory {
         }
 
         Command command = supplier.get();
-        command.setContextParameters(contextParams);
         command.setUserArguments(userArguments);
 
         return command;

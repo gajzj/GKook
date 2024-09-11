@@ -9,5 +9,6 @@ public interface Command {
     void setContextParameters(Map<String, Object> contextParams);
     void setUserArguments(List<String> userArguments); // 修改为 List<String>
     Command chain(Command nextCommand);
+    Command next();
 }
 

@@ -57,7 +57,6 @@ public class WebSocketHandler {
         message = new String(message.getBytes("ISO-8859-1"), "UTF-8");
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = null;
-        System.out.println(message);
         try {
             root = mapper.readTree(message);
         } catch (IOException e) {
@@ -67,23 +66,41 @@ public class WebSocketHandler {
         switch (s) {
             case 0 -> { // TODO: 用 Event 队列优化
                 String content = root.get("d").get("content").asText();
-
+                content = content.replace("\\\\", "\\")
+                        .replace("\\(", "(")
+                        .replace("\\)", ")")
+                        .replace("\\*", "*")
+                        .replace("\\<", "<")
+                        .replace("\\>", ">")
+                        .replace("\\[", "[")
+                        .replace("\\]", "]");
+                System.out.println(content);
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
-                    if (!authorId.equals(BotConfig.BOT_ID)) { // 不识别机器人 id
+
+                    // 不识别机器人 id
+                    if (!authorId.equals(BotConfig.BOT_ID)) {
                         String channelId = root.get("d").get("target_id").asText();
-                        Optional<Command> command = BotManager.interpret(content);
-                        if (command.isPresent()) {
-                            if (command.get() instanceof HelloCommand) {
+                        Optional<Command> oc = BotManager.interpret(content);
+                        Command rootCmd = null;
+                        if (oc.isPresent()) {
+                            rootCmd = oc.get();
+                            if (rootCmd instanceof HelloCommand) {
                                 Map<String, Object> contextParams = new HashMap<>();
                                 contextParams.put("type", 1);
                                 contextParams.put("targetId", channelId);
 //                                contextParams.put("content", "hello");
                                 contextParams.put("tempTargetId", "");
-                                command.get().setContextParameters(contextParams);
-                                BotManager.execute(command.get());
+                                Command command = rootCmd;
+                                do {
+                                    command.setContextParameters(contextParams);
+                                    command = command.next();
+                                } while (command != null);
+                                BotManager.execute(rootCmd);
                             }
                         }
+
+                    }
 
 
 //                        if (content.startsWith("/info")) {
@@ -93,7 +110,7 @@ public class WebSocketHandler {
 //                        } else if (content.equals("/cleanup")) {
 //                            BotManager.cleanupChannelMessage(channelId, authorId);
 //                        }
-                    }
+
                 } else if (content.equals("[系统消息]")) {
                     String extraType = root.get("d").get("extra").get("type").asText();
                     EventType eventType = EventType.value(extraType);
