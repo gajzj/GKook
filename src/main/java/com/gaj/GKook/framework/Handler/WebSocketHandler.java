@@ -74,7 +74,7 @@ public class WebSocketHandler {
                         .replace("\\>", ">")
                         .replace("\\[", "[")
                         .replace("\\]", "]");
-                System.out.println(content);
+//                System.out.println(content);
                 if (content.startsWith("/")) {
                     String authorId = root.get("d").get("extra").get("author").get("id").asText();
 
@@ -85,32 +85,21 @@ public class WebSocketHandler {
                         Command rootCmd = null;
                         if (oc.isPresent()) {
                             rootCmd = oc.get();
-                            if (rootCmd instanceof HelloCommand) {
-                                Map<String, Object> contextParams = new HashMap<>();
-                                contextParams.put("type", 1);
-                                contextParams.put("targetId", channelId);
-//                                contextParams.put("content", "hello");
-                                contextParams.put("tempTargetId", "");
-                                Command command = rootCmd;
-                                do {
-                                    command.setContextParameters(contextParams);
-                                    command = command.next();
-                                } while (command != null);
-                                BotManager.execute(rootCmd);
-                            }
+
+                            Map<String, Object> contextParams = new HashMap<>();
+                            contextParams.put("type", 1);
+                            contextParams.put("targetId", channelId);
+                            contextParams.put("content", "default content");
+                            contextParams.put("tempTargetId", "");
+                            contextParams.put("authorId", authorId);
+                            Command command = rootCmd;
+                            do {
+                                command.setContextParameters(contextParams);
+                                command = command.next();
+                            } while (command != null);
+                            BotManager.execute(rootCmd);
                         }
-
                     }
-
-
-//                        if (content.startsWith("/info")) {
-//                            System.out.println(message);
-//                        } else if (content.equals("/test")) {
-//
-//                        } else if (content.equals("/cleanup")) {
-//                            BotManager.cleanupChannelMessage(channelId, authorId);
-//                        }
-
                 } else if (content.equals("[系统消息]")) {
                     String extraType = root.get("d").get("extra").get("type").asText();
                     EventType eventType = EventType.value(extraType);

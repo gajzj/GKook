@@ -66,6 +66,7 @@ public class ApiHandler {
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
+
     }
 
     /**
@@ -112,12 +113,12 @@ public class ApiHandler {
     /**
      * 调用 /api/v3/message/list 获取消息列表
      *
-     * @param channelId 要获取的频道 id
+     * @param targetId 要获取的频道 id
      * @return 接口调用响应体
      */
-    public String getMessageListByChannelId(String channelId) {
+    public String getMessageListByChannelId(String targetId) {
         try {
-            HttpResponse<String> response = get(ApiConfig.ApiEndpoint.MESSAGE_LIST.toFullUrl() + "?target_id=" + channelId);
+            HttpResponse<String> response = get(ApiConfig.ApiEndpoint.MESSAGE_LIST.toFullUrl() + "?target_id=" + targetId);
             JsonNode root = mapper.readTree(response.body());
             if (root.get("code").asInt() == 0) {
                 return response.body();
@@ -145,8 +146,10 @@ public class ApiHandler {
                     }
                 }
             }
+            System.out.println(msgIdList);
             for (String s : msgIdList) {
                 HttpResponse<String> response = post(ApiConfig.ApiEndpoint.MESSAGE_DELETE.toFullUrl(), "{\"msg_id\":\"" + s + "\"}");
+                System.out.println(response.body());
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

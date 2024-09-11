@@ -1,6 +1,7 @@
 package com.gaj.GKook.framework.commad;
 
 import com.gaj.GKook.framework.config.CommandConfig;
+import com.gaj.GKook.imp.command.CleanupCommand;
 import com.gaj.GKook.imp.command.HelloCommand;
 
 import java.io.IOException;
@@ -18,6 +19,11 @@ public class CommandFactory {
     static {
         // TODO: 修改为注解加载？
         registerCommand("hello", HelloCommand::new);
+        registerCommand("cleanup", CleanupCommand::new);
+    }
+
+    private static void init() {
+
     }
 
     // 注册命令方法
@@ -28,7 +34,7 @@ public class CommandFactory {
     // 创建命令的方法
     public static Command createCommand(String commandName, List<String> userArguments) {
         Supplier<Command> supplier = commandRegistry.get(commandName.toLowerCase());
-        System.out.println(commandName);
+//        System.out.println(commandName);
         if (supplier == null) {
             System.err.println("Unknown command: " + commandName);
             return null;

@@ -9,8 +9,6 @@ import java.util.Map;
 
 @GCommand("hello")
 public class HelloCommand extends AbstractCommand {
-
-
     @Override
     protected void executeCommand() {
         Map<String, Object> contextParameters = getContextParameters();

@@ -63,8 +63,8 @@ public class BotManager {
         }
     }
 
-    public static void cleanupChannelMessage(String channelId, String authorId) {
-        apiHandler.cleanupChannelMessage(channelId, authorId);
+    public static void cleanupChannelMessage(String targetId, String authorId) {
+        apiHandler.cleanupChannelMessage(targetId, authorId);
     }
 
     public static void getMessageListByChannelId(String channelId) {
