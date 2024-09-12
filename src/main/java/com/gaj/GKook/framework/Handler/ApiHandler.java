@@ -229,4 +229,8 @@ public class ApiHandler {
             e.printStackTrace();
         }
     }
+
+    public HttpResponse<String> voiceJoin() {
+
+    }
 }
