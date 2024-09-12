@@ -114,6 +114,38 @@ public class WebSocketHandler {
                         case EXITED_CHANNEL -> {
 //                            BotManager.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
                         }
+                        case MESSAGE_BTN_CLICK -> {
+                            System.out.println(message);
+                            String value = root.get("d").get("extra").get("body").get("value").asText();
+                            // TODO: 按钮点击的响应
+                            if (value.startsWith("/")) {
+                                String authorId = root.get("d").get("extra").get("body").get("user_id").asText();
+
+                                // 不识别机器人 id
+                                if (!authorId.equals(BotConfig.BOT_ID)) {
+                                    String channelId = root.get("d").get("extra").get("body").get("target_id").asText();
+                                    Optional<Command> oc = BotManager.interpret(value);
+                                    Command rootCmd = null;
+                                    if (oc.isPresent()) {
+                                        rootCmd = oc.get();
+
+                                        Map<String, Object> contextParams = new HashMap<>();
+                                        contextParams.put("type", 1);
+                                        contextParams.put("targetId", channelId);
+                                        contextParams.put("content", "default content");
+                                        contextParams.put("tempTargetId", "");
+                                        contextParams.put("authorId", authorId);
+
+                                        Command command = rootCmd;
+                                        do {
+                                            command.setContextParameters(contextParams);
+                                            command = command.next();
+                                        } while (command != null);
+                                        BotManager.execute(rootCmd);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 sn = root.get("sn").asInt();
@@ -137,7 +169,7 @@ public class WebSocketHandler {
                 this.sessionId = root.get("d").get("sessionId").asText();
             }
             default -> {
-                System.out.println(">>>s:" + s + " no support by now<<<");
+                System.out.println(">>>s: " + s + " no support by now<<<");
                 System.out.println(message);
             }
         }

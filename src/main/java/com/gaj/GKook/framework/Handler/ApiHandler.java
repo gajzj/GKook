@@ -146,10 +146,9 @@ public class ApiHandler {
                     }
                 }
             }
-            System.out.println(msgIdList);
             for (String s : msgIdList) {
                 HttpResponse<String> response = post(ApiConfig.ApiEndpoint.MESSAGE_DELETE.toFullUrl(), "{\"msg_id\":\"" + s + "\"}");
-                System.out.println(response.body());
+
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -207,9 +206,6 @@ public class ApiHandler {
      */
     public void sendMessageToChannel(int type, String targetId, String content, String tempTargetId) {
         // TODO: 拓展消息种类 目前只接收 type = 1
-        if (type != 1) {
-            throw new IllegalArgumentException("type " + type + "no support by now");
-        }
         try {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("type", type);
@@ -220,6 +216,7 @@ public class ApiHandler {
             HttpResponse<String> response = post(ApiConfig.ApiEndpoint.MESSAGE_CREATE.toFullUrl(), requestBody);
 
             JsonNode root = mapper.readTree(response.body());
+            System.out.println(response.body());
             if (root.get("code").asInt() == 0) {
                 // success
             } else {

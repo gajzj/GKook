@@ -47,25 +47,4 @@ public class CommandHandler {
         }
         return instance;
     }
-
-    /**
-     * 打招呼命令
-     *
-     * @param message
-     */
-    public void helloCommand(String message) {
-
-        JsonNode root = null;
-        try {
-            root = mapper.readTree(message);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        String content = root.get("d").get("content").asText();
-        String authorId = root.get("d").get("extra").get("author").get("id").asText();
-        String channelId = root.get("d").get("target_id").asText();
-        String username = root.get("d").get("extra").get("author").get("username").asText();
-        System.out.println("send from: " + authorId + " in channel: " + channelId + ": " + content);
-        BotManager.sendMessageToChannel(1, channelId, "你好" + username, authorId);
-    }
 }
