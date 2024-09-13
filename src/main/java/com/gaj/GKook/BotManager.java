@@ -10,6 +10,7 @@ import com.gaj.GKook.framework.Handler.WebSocketHandler;
 import com.gaj.GKook.framework.commad.Command;
 import com.gaj.GKook.framework.commad.CommandProcessor;
 
+import java.net.http.HttpResponse;
 import java.util.Optional;
 
 public class BotManager {
@@ -70,4 +71,9 @@ public class BotManager {
     public static void getMessageListByChannelId(String channelId) {
         apiHandler.getMessageListByChannelId(channelId);
     }
+
+    public static HttpResponse<String> voiceJoin() {
+        return apiHandler.voiceJoin();
+    }
+
 }

@@ -19,6 +19,9 @@ public class ApiConfig {
 
         // channel
 
+        // voice
+        VOICE_JOIN("/api/v3/voice/join"),
+
         // user
         USER_VIEW("/api/v3/user/view");
 

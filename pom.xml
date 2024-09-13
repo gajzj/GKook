@@ -12,6 +12,12 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!--   这里是JavaCV的版本     -->
+        <javacpp.version>1.5.7</javacpp.version>
+        <!--   这里是JavaCV FFmpeg的版本     -->
+        <javacpp-ffmpeg.version>5.0</javacpp-ffmpeg.version>
+
     </properties>
 
     <dependencies>
@@ -37,6 +43,38 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>6.1.4</version>
+        </dependency>
+
+        <!--   javacv相关     -->
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacv</artifactId>
+            <version>${javacpp.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!--   ffmpeg相关   -->
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${javacpp-ffmpeg.version}-${javacpp.version}</version>
+        </dependency>
+        <!--   这里的引入取决于你使用的平台，笔者这里需要在windows、linux中使用，所以需要引入相关平台的可执行文件、.so文件   -->
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${javacpp-ffmpeg.version}-${javacpp.version}</version>
+            <classifier>windows-x86_64</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${javacpp-ffmpeg.version}-${javacpp.version}</version>
+            <classifier>linux-x86_64</classifier>
         </dependency>
     </dependencies>
 

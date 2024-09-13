@@ -84,7 +84,6 @@ public class ApiHandler {
                     .header("Authorization", BotConfig.BOT_TOKEN)
                     .header("Content-Type", "application/json; utf-8")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonString)).build();
-            System.out.println(jsonString);
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return response;
         } catch (JsonProcessingException e) {
@@ -228,5 +227,29 @@ public class ApiHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public HttpResponse<String> voiceJoin() {
+
+        try {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("channel_id", "9670384008913996");
+
+            HttpResponse<String> response = post(ApiConfig.ApiEndpoint.VOICE_JOIN.toFullUrl(), requestBody);
+
+            JsonNode root = null;
+            root = mapper.readTree(response.body());
+
+            if (root.get("code").asInt() == 0) {
+                // success
+                return response;
+            } else {
+                System.out.println(response.headers());
+            }
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        throw new RuntimeException();
     }
 }

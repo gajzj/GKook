@@ -105,11 +105,11 @@ public class WebSocketHandler {
                     EventType eventType = EventType.value(extraType);
                     switch (eventType) {
                         case JOINED_CHANNEL -> {
-                            String userId = root.get("d").get("extra").get("body").get("user_id").asText();
-                            String guildId = root.get("d").get("target_id").asText();
-                            User user = BotManager.getUser(userId, guildId);
-                            // TODO: 推送频道固定为 7870488044424418，需要更改
-                            BotManager.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
+//                            String userId = root.get("d").get("extra").get("body").get("user_id").asText();
+//                            String guildId = root.get("d").get("target_id").asText();
+//                            User user = BotManager.getUser(userId, guildId);
+//                            // TODO: 推送频道固定为 7870488044424418，需要更改
+//                            BotManager.sendMessageToChannel(1, "7870488044424418", user.getUsername() + "悄咪咪加入了语音", "");
                         }
                         case EXITED_CHANNEL -> {
 //                            BotManager.sendMessageToChannel(1, "7870488044424418", "有人退出了语音", "");
