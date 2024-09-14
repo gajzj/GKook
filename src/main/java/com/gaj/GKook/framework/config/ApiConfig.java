@@ -21,7 +21,7 @@ public class ApiConfig {
 
         // voice
         VOICE_JOIN("/api/v3/voice/join"),
-
+        VOICE_LEAVE("/api/v3/voice/leave"),
         // user
         USER_VIEW("/api/v3/user/view");
 

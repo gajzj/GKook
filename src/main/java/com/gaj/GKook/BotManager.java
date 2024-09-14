@@ -72,8 +72,11 @@ public class BotManager {
         apiHandler.getMessageListByChannelId(channelId);
     }
 
-    public static HttpResponse<String> voiceJoin() {
-        return apiHandler.voiceJoin();
+    public static HttpResponse<String> voiceJoin(String channelId) {
+        return apiHandler.voiceJoin(channelId);
     }
 
+    public static HttpResponse<String> voiceLeave(String channelId) {
+        return apiHandler.voiceLeave(channelId);
+    }
 }

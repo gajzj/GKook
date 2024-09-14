@@ -229,11 +229,15 @@ public class ApiHandler {
         }
     }
 
-    public HttpResponse<String> voiceJoin() {
+    /**
+     * @param channelId
+     * @return
+     */
+    public HttpResponse<String> voiceJoin(String channelId) {
 
         try {
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("channel_id", "9670384008913996");
+            requestBody.put("channel_id", channelId);
 
             HttpResponse<String> response = post(ApiConfig.ApiEndpoint.VOICE_JOIN.toFullUrl(), requestBody);
 
@@ -251,5 +255,29 @@ public class ApiHandler {
             throw new RuntimeException(e);
         }
         throw new RuntimeException();
+    }
+
+    public HttpResponse<String> voiceLeave(String channelId) {
+        try {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("channel_id", channelId);
+
+            HttpResponse<String> response = post(ApiConfig.ApiEndpoint.VOICE_LEAVE.toFullUrl(), requestBody);
+
+            JsonNode root = null;
+            root = mapper.readTree(response.body());
+
+            if (root.get("code").asInt() == 0) {
+                // success
+                return response;
+            } else {
+                System.out.println(response.headers());
+            }
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return null;
     }
 }
